@@ -1,19 +1,85 @@
 version: '3'
 
 services:
-  cassandra:
+#  cassandra-seed:
+#    image: cassandra:3.11.7
+#    volumes:
+#      - "cassandra_data_seed:/var/lib/cassandra"
+#    ports:
+#      - 7000:7000
+#      - 7199:7199
+#      - 9042:9042
+#      - 9160:9160
+#    environment:
+#      - "CASSANDRA_SEEDS=cassandra-seed"
+#      - "CASSANDRA_CLUSTER_NAME=cassandraex "
+#      - "CASSANDRA_DC=se1"
+#      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
+#  cassandra-node-1:
+#    image: cassandra:3.11.7
+#    command: /bin/bash -c "echo 'Waiting for seed node' && sleep 30 && /docker-entrypoint.sh cassandra -f"
+#    volumes:
+#      - "cassandra_data_1:/var/lib/cassandra"
+#    environment:
+#      - "CASSANDRA_SEEDS=cassandra-seed"
+#      - "CASSANDRA_CLUSTER_NAME=cassandraex"
+#      - "CASSANDRA_DC=se1"
+#      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
+#    depends_on:
+#      - "cassandra-seed"
+#
+#  # you cannot have multiple nodes join the cluster at the same time when
+#  # cassandra.consistent.rangemovement is true so we further delay it to give it time to stabilize
+#  cassandra-node-2:
+#    image: cassandra:3.11.7
+#    command: /bin/bash -c "echo 'Waiting for seed node' && sleep 80 && /docker-entrypoint.sh cassandra -f"
+#    volumes:
+#      - "cassandra_data_2:/var/lib/cassandra"
+#    environment:
+#      - "CASSANDRA_SEEDS=cassandra-seed"
+#      - "CASSANDRA_CLUSTER_NAME=cassandraex"
+#      - "CASSANDRA_DC=se1"
+#      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
+#    depends_on:
+#      - "cassandra-seed"
+#  cqlsh:
+#    image: cassandra:3.11.7
+#    entrypoint: cqlsh cassandra
+#    volumes:
+#      - ./cassandra/schema.cql:/schema.cql
+  cassandra-seed:
+    container_name: cassandra-seed-node
     image: cassandra:3.11.7
-    ports:
-      - 7000:7000
-      - 7199:7199
-      - 9042:9042
-      - 9160:9160
-    environment:
-      CASSANDRA_CLUSTER_NAME: cassandraex
-    container_name: cassandra
-  cqlsh:
-    image: cassandra:3.11.7
-    entrypoint: cqlsh cassandra
     volumes:
-      - ./cassandra/schema.cql:/schema.cql
+      - "cassandra_data_seed:/var/lib/cassandra"
+    ports:
+      - "9042:9042"   # Native transport
+      - "7199:7199"   # JMX
+      - "9160:9160"   # Thrift clients
 
+  cassandra-node-1:
+    image: cassandra:3.11.7
+    command: /bin/bash -c "echo 'Waiting for seed node' && sleep 30 && /docker-entrypoint.sh cassandra -f"
+    volumes:
+      - "cassandra_data_1:/var/lib/cassandra"
+    environment:
+      - "CASSANDRA_SEEDS=cassandra-seed-node"
+    depends_on:
+      - "cassandra-seed"
+
+  # you cannot have multiple nodes join the cluster at the same time when
+  # cassandra.consistent.rangemovement is true so we further delay it to give it time to stabilize
+  cassandra-node-2:
+    image: cassandra:3.11.7
+    command: /bin/bash -c "echo 'Waiting for seed node' && sleep 80 && /docker-entrypoint.sh cassandra -f"
+    volumes:
+      - "cassandra_data_2:/var/lib/cassandra"
+    environment:
+      - "CASSANDRA_SEEDS=cassandra-seed-node"
+    depends_on:
+      - "cassandra-seed"
+
+volumes:
+  cassandra_data_seed:
+  cassandra_data_1:
+  cassandra_data_2:
